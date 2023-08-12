@@ -49,9 +49,29 @@ Motivated by above two concerns, the encoder comprises a bidirectional LSTM, alo
 ![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/d9042715-1625-461e-a124-442881073eed)
 
 ### Prefix-Tuning: [Prefix-Tuning: Optimizing Continuous Prompts for Generation](https://aclanthology.org/2021.acl-long.353/)
+Compared with prompt tuning and p-tuning, prefix tuning appends trainable tensors to each transformer block instead of only the input embeddings. Furthermore, the author empirically found that directly updating the parameter of learnable prompt leads to unstable optimization and a drop in performance. To solve that, prefix-tuning obtain the prompt embedding vis fully connected layers(a multilayer perceptron with two layers and a activation function in between), as illustrated in the below figure. Once training is complete, the fully connected layers are removed, and only the prompt embedding needs to be saved.
+
+![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/fcae8f97-1107-44cd-944c-8ed1247a0bac)
+
+Let's dig deeper into prefix tuning vs prompt tuning. 
+  - From the aspect of number of trainable parameters, prefix tuning modifies more layers of the LLM by inserting a task-specific prefix to the input sequence, while prompt tuning only append prompt embedding to the input layer. Thus, prefix-tuning requires more parameters to be finetuned. This may make prompt tuning more parameter-efficient than prefix tuning, but it may has more limited capacity to adapt to the target task than prefix training.
+  - From the aspect of performance, it is reasonable to expect that prefix tuning might perform better since it has more parameters to adjust the model to the new task. However, oberviously, it brings the costs of computational resources.
 
 ### $(IA)^3$ : [Infused Adapter by Inhibiting and Amplifying Inner Activations](https://arxiv.org/abs/2205.05638)
+The above methods, including prompt tuning, p-tuning, and prefix-tuning, share a shortcut: they can not perform inference for multi-task in the same batch. Compared with them, $(IA)^3$ weights the model parameters by multiplying the specific tensor with a learnable vector instead of modifying prompts.
 
+To be more specific, $(IA)^3$ suppress or amplify some activation layers of the model, including key vector, value vector, and activation layer before feedforward neural network in each transformer block, as shown in below figure.
+
+![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/75f43564-8db7-43d1-bf10-ed235b8beee9)
+
+
+## Getting Started
+
+### Requirements
+
+### Walk through the codes
+
+### Evaluation Results
 | Fine-Tuning Method | Batch Size | Number of total params | Trainable params | Required GPU memory | Speed (Train) | Speed(Eval) | Accuracy |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | LoRA | 8 | 1,231,940,608 | 2,359,296 (0.191%) | 9392MiB | 3.32it/s | 8.96it/s |96.47% |
