@@ -3,8 +3,11 @@ Share the methods about Parameter-Efficient Fine-Tuning and the tricks for runni
 
 ------------------
 
-## Fine Tuning Methos
-Currently, transformers-based Large Language Model(LLM) have achieve state-of-the-art performance in every tasks of NLP. Generally, LLM models are pre-trained with specially designed pre-training tasks on large-scale unlabeled datasets. These pre-trained models are very effective as general-purpose semantic features,  which which have largely raised the performance bar of NLP tasks. Subsequently, fine-tuning a pre-trained language model on downstream tasks has become a paradigm for NLP tasks. 
+## Fine Tuning Methods
+Currently, transformers-based Large Language Model(LLM) have achieve state-of-the-art performance in every tasks of NLP. Generally, LLM models are pre-trained with specially designed pre-training tasks on large-scale unlabeled datasets. These pre-trained models are very effective as general-purpose semantic features,  which which have largely raised the performance bar of NLP tasks. Subsequently, fine-tuning a pre-trained language model on downstream tasks has become a paradigm for NLP tasks. However, As models get larger(3B~176B), full fine-tuning of the model on consumer-grade hardware becomes infeasible. Motivated by that, research community proposed Parameter-Efficient Fine-Tuning (PEFT), which enable efficient adaptation of pre-trained language models (PLMs) to various downstream applications without fine-tuning all the model's parameters.
+
+This project aims to briefly explain the various PEFT technologies and provide sample codes.
+![Scaling Down to Scale Up: A Guide to Parameter-Efficient Fine-Tuning](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/74b5662f-878d-4644-9481-7f961eab0d3c)
 
 ### LoRA
 
