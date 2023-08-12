@@ -27,10 +27,26 @@ We encourage readers to read the paper for further detail about the following qu
 
 ![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/a1e2093a-d28d-4dd0-8543-cd87e6f7a07a)
 
-
 ### Prompt Tuning: [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691)
+For LLM, prompt can greatly affect the performance on various task. Motivated by that, prompt tuning aims to find the prompts which release the potential of LLMs and achieve well performance on downstream tasks. The naive methods of prompt tuning is using manually designed prompts. However, the naive methods lack flexibility and attain inferior results. To solve that, the authors propose to learn prompts by updating parameters through backpropagation, instead of manually designing prompts.
+
+Prompt tuning first initializes a task-specific prompt, which is represented as embedding matrix $P_{e} \in R^{p\times e}$, where $p$ is the length of the prompt. Then we prepend them to the inputs $X_{e} \in R^{n\times e}$, which is embed from a series of $n$ tokens $x_1, x_2, ..., x_n$. During training, the concatenated input $[P_e;X_e]$ flows though the LLM as normal, and only the prompt $P_{e}$ is updated.
+
+![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/75dcec4c-b6a2-48f6-975f-5aefa4b3027d)
+
+We encourage readers to read the paper for further detail about the following questions
+ - What should be the length of the prompt token $p$?
 
 ### P-Tuning: [GPT Understands, Too](https://arxiv.org/abs/2103.10385)
+P-Tuning share the similiar insight with prompt tuning: utilizing a suitable prompt to enhance the LLM performance. There are two main difference between the prompt tuning and p-tuning. First, p-tuning learns a prompt encoder to encode the pseudo prompts, which is initialized with unused words or task name, instead of directly learning prompts itself. Second, encoded pseudo tokens can be inserted at any position instead of only prefix.
+
+To be a step further, learning encoder can solves two two optimization challenges of learning prompts.
+  - Word embedding layers of pretrained LLMs have become highly discrete, randomly initializing the prompts easily lead to local optimal
+  - Intuitively, the authors believe the values of prompt embeddings $h_i$ should be dependent on each other rather than independent
+    
+Motivated by above two concerns, the encoder comprises a bidirectional LSTM, along with a ReLU-activated two-layer multilayer perceptron (MLP). In this way, the structure of LSTM improves the integrity of prompt, and the MLP with Relu activation function encourage discreteness.
+
+![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/d9042715-1625-461e-a124-442881073eed)
 
 ### Prefix-Tuning: [Prefix-Tuning: Optimizing Continuous Prompts for Generation](https://aclanthology.org/2021.acl-long.353/)
 
