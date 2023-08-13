@@ -1,0 +1,10 @@
+psutil
+torch
+peft
+transformers
+accelerate
+evaluate
+deepspeed
+tqdm
+datasets
+bitsandbytes
