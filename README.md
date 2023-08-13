@@ -1,7 +1,21 @@
 # LLM_FineTune
 Share the methods about Parameter-Efficient Fine-Tuning and the tricks for running LLM on consumer-level GPUs
 
-------------------
+## Table of contents
+- [Fine Tuning Methods](#fine-tuning-methods)
+  * [LoRA](#lora)
+  * [Prompt-Tuning](#prompt-tuning)
+  * [P-Tuning](#p-tuning)
+  * [Prefix-Tuning](#prefix-tuning)
+  * [IA3](#ia3)
+- [Getting Started](#getting-started)
+  * [Requirements](#requirements)
+  * [Walk through the codes](#walk-through-the-codes)
+  * [Evaluation Results](#evaluation-results)
+  * [Other implementations](#other-implementations)
+- [Distributed LLM training](#distributed-llm-training)
+- [Quantization for training larger LLM](#quantization-for-training-larger-llm)
+- [To be continued...](#to-be-continued)
 
 ## Fine Tuning Methods
 Currently, transformers-based Large Language Model(LLM) have achieve state-of-the-art performance in every tasks of NLP. Generally, LLM models are pre-trained with specially designed pre-training tasks on large-scale unlabeled datasets. These pre-trained models are very effective as general-purpose semantic features,  which which have largely raised the performance bar of NLP tasks. Subsequently, fine-tuning a pre-trained language model on downstream tasks has become a paradigm for NLP tasks. However, As models get larger(3B~176B), full fine-tuning of the model on consumer-grade hardware becomes infeasible. Motivated by that, research community proposed Parameter-Efficient Fine-Tuning (PEFT), which enable efficient adaptation of pre-trained language models (PLMs) to various downstream applications without fine-tuning all the model's parameters.
@@ -15,7 +29,7 @@ parameters or layers and training only the newly added parameters. Moreover, add
 
 Here, we only introduce a few of the methods which have been supported by huggingface🤗 [peft](https://huggingface.co/docs/peft/main/en/index)
 
-### LoRA: [Low-Rank Adapatation of Large Launguage Models](https://arxiv.org/abs/2106.09685)
+### [LoRA](https://arxiv.org/abs/2106.09685)
 Neural networks contain many fully connected layers, which are implemented with the help of matrix multiplication. Recent research consider that the parameter matrix for weight update can be effectively learned despite being randomly projected into a smaller subspace. Based on the insight, LoRA reduces the number of parameters and the operations of matrix multiplication by **low-rank decomposition**.
 
 Specifically, for a pre-trained wegiht matrix $W_{0} \in R^{d\times k}$, it's update can be represented as a low-rank composition $W_{0} + \Delta W = W_{0} + BA$, where $B \in R^{d\times r}, A \in R^{r\times k}, r << max(d,k)$, such that the size of matrix decreases from $d \times k$ to $d \times r + r \times k$. During training process, pre-trained model weights $W_{0}$ are freezed and we only optimize $A$ and $B$. 
@@ -27,7 +41,7 @@ We encourage readers to read the paper for further detail about the following qu
 
 ![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/a1e2093a-d28d-4dd0-8543-cd87e6f7a07a)
 
-### Prompt Tuning: [The Power of Scale for Parameter-Efficient Prompt Tuning](https://arxiv.org/abs/2104.08691)
+### [Prompt Tuning](https://arxiv.org/abs/2104.08691)
 For LLM, prompt can greatly affect the performance on various task. Motivated by that, prompt tuning aims to find the prompts which release the potential of LLMs and achieve well performance on downstream tasks. The naive methods of prompt tuning is using manually designed prompts. However, the naive methods lack flexibility and attain inferior results. To solve that, the authors propose to learn prompts by updating parameters through backpropagation, instead of manually designing prompts.
 
 Prompt tuning first initializes a task-specific prompt, which is represented as embedding matrix $P_{e} \in R^{p\times e}$, where $p$ is the length of the prompt. Then we prepend them to the inputs $X_{e} \in R^{n\times e}$, which is embed from a series of $n$ tokens $x_1, x_2, ..., x_n$. During training, the concatenated input $[P_e;X_e]$ flows though the LLM as normal, and only the prompt $P_{e}$ is updated.
@@ -37,7 +51,7 @@ Prompt tuning first initializes a task-specific prompt, which is represented as 
 We encourage readers to read the paper for further detail about the following questions
  - What should be the length of the prompt token $p$?
 
-### P-Tuning: [GPT Understands, Too](https://arxiv.org/abs/2103.10385)
+### [P-Tuning](https://arxiv.org/abs/2103.10385)
 P-Tuning share the similiar insight with prompt tuning: utilizing a suitable prompt to enhance the LLM performance. There are two main difference between the prompt tuning and p-tuning. First, p-tuning learns a prompt encoder to encode the pseudo prompts, which is initialized with unused words or task name, instead of directly learning prompts itself. Second, encoded pseudo tokens can be inserted at any position instead of only prefix.
 
 To be a step further, learning encoder can solves two two optimization challenges of learning prompts.
@@ -48,7 +62,7 @@ Motivated by above two concerns, the encoder comprises a bidirectional LSTM, alo
 
 ![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/d9042715-1625-461e-a124-442881073eed)
 
-### Prefix-Tuning: [Prefix-Tuning: Optimizing Continuous Prompts for Generation](https://aclanthology.org/2021.acl-long.353/)
+### [Prefix-Tuning](https://aclanthology.org/2021.acl-long.353/)
 Compared with prompt tuning and p-tuning, prefix tuning appends trainable tensors to each transformer block instead of only the input embeddings. Furthermore, the author empirically found that directly updating the parameter of learnable prompt leads to unstable optimization and a drop in performance. To solve that, prefix-tuning obtain the prompt embedding vis fully connected layers(a multilayer perceptron with two layers and a activation function in between), as illustrated in the below figure. Once training is complete, the fully connected layers are removed, and only the prompt embedding needs to be saved.
 
 ![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/fcae8f97-1107-44cd-944c-8ed1247a0bac)
@@ -57,7 +71,7 @@ Let's dig deeper into prefix tuning vs prompt tuning.
   - From the aspect of number of trainable parameters, prefix tuning modifies more layers of the LLM by inserting a task-specific prefix to the input sequence, while prompt tuning only append prompt embedding to the input layer. Thus, prefix-tuning requires more parameters to be finetuned. This may make prompt tuning more parameter-efficient than prefix tuning, but it may has more limited capacity to adapt to the target task than prefix training.
   - From the aspect of performance, it is reasonable to expect that prefix tuning might perform better since it has more parameters to adjust the model to the new task. However, oberviously, it brings the costs of computational resources.
 
-### $(IA)^3$ : [Infused Adapter by Inhibiting and Amplifying Inner Activations](https://arxiv.org/abs/2205.05638)
+### [IA3](https://arxiv.org/abs/2205.05638)
 The above methods, including prompt tuning, p-tuning, and prefix-tuning, share a shortcut: they can not perform inference for multi-task in the same batch. Compared with them, $(IA)^3$ weights the model parameters by multiplying the specific tensor with a learnable vector instead of modifying prompts.
 
 To be more specific, $(IA)^3$ suppress or amplify some activation layers of the model, including key vector, value vector, and activation layer before feedforward neural network in each transformer block, as shown in below figure.
@@ -65,7 +79,7 @@ To be more specific, $(IA)^3$ suppress or amplify some activation layers of the 
 ![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/75f43564-8db7-43d1-bf10-ed235b8beee9)
 
 ## Getting Started
-All the sample codes are implemented with 🤗[huggleface]([https://github.com/huggingface/peft/tree/main)(https://huggingface.co/)]. You can modify the sample code by replace datasets or pre-trained models. The list of datasets and pre-trained models can be found here: [dataset_list](https://huggingface.co/datasets), [model_list](https://huggingface.co/models?sort=trending). 
+All the sample codes are implemented with 🤗[huggingface]([https://github.com/huggingface/peft/tree/main)(https://huggingface.co/)]. You can modify the sample code by replace datasets or pre-trained models. The list of datasets and pre-trained models can be found here: [dataset_list](https://huggingface.co/datasets), [model_list](https://huggingface.co/models?sort=trending). 
 
 ### Requirements
 Install required packages for different fine-tuning methods. Simply navigate to the folder with `requirements.txt` and run below commands. Besides `pip`, you can install all packages with `conda install` too
@@ -112,7 +126,7 @@ dataset = dataset.map(
 )
 ```
 
-The remaining parts are written in the same way as pytorch, you can easily fine-tune LLM with huggleface🤗
+The remaining parts are written in the same way as pytorch, you can easily fine-tune LLM with huggingface🤗
 
 ### Evaluation Results
 The experiments were conducted on a server withs V100 GPUs, Intel Xeon E5-2620 v4 2.1GHz CPUs, and 141GB memory. We found that prefix-tuning requires the lowest memory of GPU and has the fastest training and inference speed. Besides speed, we also found that prompt-tuning and p-tuning requires higher learning rate for better accuracy. But this involves hyper-parameter tuning, which is beyond the scope of this project.
@@ -127,4 +141,18 @@ The experiments were conducted on a server withs V100 GPUs, Intel Xeon E5-2620 v
 ### Other implementations
 In addition to fine-tuning methods, I also studied a few important technologies related to fine-tuning.
 ## Distributed LLM training
+I implements distributed LLM training with 🤗[huggingface/accelerate](https://huggingface.co/docs/accelerate/index). I recommend readers refer to the [quicktour](https://huggingface.co/docs/accelerate/quicktour) of accelerate, which is well writted! To customize the number of parallel processes and other configuration, you should run `accelerate config` first and specific `.yaml` in the commend. Here, we just use the default configuration, so you can just run `accelerate/peft_accelerate.py` with commend below.
+```bash
+cd accelerate
+accelerate launch peft_accelerate.py
+# or accelerate launch --config_file path_to_config.yaml path_to_script.py --args_for_the_script
+```
+
 ## Quantization for training larger LLM
+To train very large LM in consumer-level GPUs, you may require quantization methods. In `quantization/quantization_int8.py`, I fine-tune [facebook/opt-6.7b](https://huggingface.co/facebook/opt-6.7b) with a single A100 GPU, which has only 16GB memroy. You can run the sample code with below commends
+```bash
+cd quantization
+python quantization_int8.py
+```
+## To be continued...
+There are many interesting fields in Parameter-Efficient Fine-Tuning. Currently, the sample codes may be too naive for the readers aiming to apply LLM in real world application. I will continue to update more fine-tuning methods and more about distributed LLM training and quantization methods. For example, [ZeRO in deepspeed](https://www.deepspeed.ai/tutorials/zero/), other library tutorials about huggingface libraries...
