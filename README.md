@@ -64,14 +64,58 @@ To be more specific, $(IA)^3$ suppress or amplify some activation layers of the 
 
 ![image](https://github.com/Yu-Min-Chou/LLM_FineTune/assets/42434345/75f43564-8db7-43d1-bf10-ed235b8beee9)
 
-
 ## Getting Started
+All the sample codes are implemented with 🤗[huggleface]([https://github.com/huggingface/peft/tree/main)(https://huggingface.co/)]. You can modify the sample code by replace datasets or pre-trained models. The list of datasets and pre-trained models can be found here: [dataset_list](https://huggingface.co/datasets), [model_list](https://huggingface.co/models?sort=trending). 
 
 ### Requirements
+Install required packages for different fine-tuning methods. Simply navigate to the folder with `requirements.txt` and run below commands. Besides `pip`, you can install all packages with `conda install` too
+
+```bash
+git clone https://github.com/Yu-Min-Chou/LLM_FineTune.git
+conda create -n llm_peft python=3.11
+conda activate llm_peft
+cd LLM_FineTune
+python -m pip install -r requirements.txt
+```
 
 ### Walk through the codes
+All the sample codes in the folder `peft_mt0-large_financial_phrasebank` are very similiar. Let's take `peft_lora.py` as an example and only explain the necessary part.
+
+At first, we specific the device(GPU) and use [mt0-large](https://huggingface.co/bigscience/mt0-large)(1.23B) for training. Different fine-tuning methods should initialize different `peft_config`. Readers can refer to the [link](https://huggingface.co/docs/peft/main/en/package_reference/tuners) to learn how to set the corresponding config for different methods. Next, we load pre-trained mt0-large and wrap it with `get_peft_model()`
+```bash
+device = "cuda"
+model_name_or_path = "bigscience/mt0-large"
+tokenizer_name_or_path = "bigscience/mt0-large"
+
+# creating model
+peft_config = LoraConfig(task_type=TaskType.SEQ_2_SEQ_LM, inference_mode=False, r=8, lora_alpha=32, lora_dropout=0.1)
+
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
+model = get_peft_model(model, peft_config)
+model.print_trainable_parameters()
+# trainable params: 2,359,296 || all params: 1,231,940,608 || trainable%: 0.19151053100118282
+```
+
+We use [financial_phrasebank-sentences_allagree](https://huggingface.co/datasets/financial_phrasebank) for training. This dataset has 2.26k rows of data. You can easily perform training with another dataset by replace the name of the datasets and its subset. However, different dataset may have different data preprocessing methods.
+```bash
+# loading dataset
+dataset = load_dataset("financial_phrasebank", "sentences_allagree")
+dataset = dataset["train"].train_test_split(test_size=0.1)
+dataset["validation"] = dataset["test"]
+del dataset["test"]
+
+classes = dataset["train"].features["label"].names
+dataset = dataset.map(
+  lambda x: {"text_label": [classes[label] for label in x["label"]]},
+  batched=True,
+  num_proc=1,
+)
+```
+
+The remaining parts are written in the same way as pytorch, you can easily fine-tune LLM with huggleface🤗
 
 ### Evaluation Results
+The experiments were conducted on a server withs V100 GPUs, Intel Xeon E5-2620 v4 2.1GHz CPUs, and 141GB memory. We found that prefix-tuning requires the lowest memory of GPU and has the fastest training and inference speed. Besides speed, we also found that prompt-tuning and p-tuning requires higher learning rate for better accuracy. But this involves hyper-parameter tuning, which is beyond the scope of this project.
 | Fine-Tuning Method | Batch Size | Number of total params | Trainable params | Required GPU memory | Speed (Train) | Speed(Eval) | Accuracy |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | LoRA | 8 | 1,231,940,608 | 2,359,296 (0.191%) | 9392MiB | 3.32it/s | 8.96it/s |96.47% |
@@ -79,3 +123,8 @@ To be more specific, $(IA)^3$ suppress or amplify some activation layers of the 
 | P-Tuning | 8 | 1,229,902,080 | 320,768 (0.026%) |9800MiB | 3.79it/s | 9.48it/s |60.59% |
 | Prefix-Tuning | 8 | 1,230,564,352 | 983,040 (0.079%) |6144MiB | 5.67it/s | 10.07it/s |96.03% |
 | (IA)3 | 8 | 1,229,863,936 | 282,624 (0.022%) | 9658MiB | 3.83it/s | 9.88it/s |96.47% |
+
+### Other implementations
+In addition to fine-tuning methods, I also studied a few important technologies related to fine-tuning.
+## Distributed LLM training
+## Quantization for training larger LLM
